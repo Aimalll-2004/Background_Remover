@@ -5,7 +5,7 @@ Created on Thu Apr 22 11:59:19 2021
 
 @author: droes
 """
-# You can use this library for oberserving keyboard presses
+
 import keyboard # pip install keyboard
 import cv2
 import numpy as np
@@ -19,9 +19,6 @@ from basics import *
 
 
 class KeyboardHandler:
-    '''
-    Handles keyboard input in a separate thread for better reliability.
-    '''
     def __init__(self):
         self.commands = {
             'filter_change': False,
@@ -34,7 +31,6 @@ class KeyboardHandler:
         self.thread.start()
         
     def _keyboard_listener(self):
-        '''Listen for keyboard input in separate thread.'''
         while self.running:
             try:
                 if keyboard.is_pressed('f'):
@@ -55,7 +51,6 @@ class KeyboardHandler:
                 time.sleep(0.1)
                 
     def get_and_reset_command(self, command):
-        '''Get command state and reset it.'''
         if command in self.commands:
             state = self.commands[command]
             self.commands[command] = False
@@ -67,9 +62,6 @@ class KeyboardHandler:
 
 
 class FilterManager:
-    '''
-    Manages different image processing filters and keyboard controls.
-    '''
     def __init__(self):
         self.current_filter = 0
         self.filter_names = [
@@ -78,8 +70,8 @@ class FilterManager:
             "Histogram Equalization", 
             "Gaussian Blur"
         ]
-        self.frame_counter = 0  # For automatic cycling if keyboard doesn't work
-        self.stats_skip_counter = 0  # Skip expensive calculations
+        self.frame_counter = 0  
+        self.stats_skip_counter = 0 
         
     def get_current_filter_name(self):
         return self.filter_names[self.current_filter]
@@ -87,18 +79,7 @@ class FilterManager:
     def next_filter(self):
         self.current_filter = (self.current_filter + 1) % len(self.filter_names)
         
-    def auto_cycle_filter(self):
-        '''Automatically cycle filters every 10 seconds (300 frames at 30fps) - SLOWER for better performance.'''
-        self.frame_counter += 1
-        if self.frame_counter >= 300:  # 10 seconds at 30fps (longer for better performance)
-            self.next_filter()
-            self.frame_counter = 0
-            print(f"Auto-switched to filter: {self.get_current_filter_name()}")
-            return True
-        return False
-        
     def apply_current_filter(self, img):
-        '''Apply the currently selected filter to the image.'''
         if self.current_filter == 0:  # Original
             return img
         elif self.current_filter == 1:  # Linear Transform
@@ -112,9 +93,6 @@ class FilterManager:
 
 
 class BackgroundRemover:
-    '''
-    Handles MediaPipe background removal and replacement - OPTIMIZED for performance.
-    '''
     def __init__(self):
         # Initialize MediaPipe Selfie Segmentation with model 0 (faster)
         self.mp_selfie_segmentation = mp.solutions.selfie_segmentation
@@ -127,7 +105,6 @@ class BackgroundRemover:
         self.last_mask = None  # Cache last mask for skipped frames
         
     def create_gradient_background(self, height, width):
-        '''Create a simple gradient background - OPTIMIZED.'''
         # Create simpler gradient for better performance
         background = np.zeros((height, width, 3), dtype=np.uint8)
         
@@ -140,7 +117,6 @@ class BackgroundRemover:
         return background
     
     def remove_background(self, image):
-        '''Remove background - OPTIMIZED for better FPS.'''
         if not self.background_enabled:
             return image
             
@@ -175,7 +151,6 @@ class BackgroundRemover:
         return output_image
     
     def toggle_background_removal(self):
-        '''Toggle background removal on/off.'''
         self.background_enabled = not self.background_enabled
         print(f"Background removal: {'ON' if self.background_enabled else 'OFF'}")
 
@@ -197,7 +172,6 @@ def custom_processing(img_source_generator):
     print("Press 'b' to toggle background removal")
     print("Press 'h' for help")
     print("Press 'q' to quit")
-    print("NOTE: Auto-cycle every 10 seconds, stats updated every 5 frames")
     print("=========================")
     
     # Performance optimization variables
@@ -211,7 +185,6 @@ def custom_processing(img_source_generator):
             # Handle keyboard input using our improved handler
             if keyboard_handler.get_and_reset_command('filter_change'):
                 filter_manager.next_filter()
-                filter_manager.frame_counter = 0  # Reset auto-cycle counter
                 print(f"Switched to filter: {filter_manager.get_current_filter_name()}")
                 
             if keyboard_handler.get_and_reset_command('background_toggle'):
@@ -228,11 +201,8 @@ def custom_processing(img_source_generator):
             if keyboard_handler.get_and_reset_command('quit'):
                 print("Quitting...")
                 break
-                
-            # Fallback: Auto-cycle filters if keyboard input isn't working
-            filter_manager.auto_cycle_filter()
 
-            # SPECIAL TASK: Apply MediaPipe background removal (optimized)
+            # SPECIAL TASK: Apply MediaPipe background removal 
             sequence = background_remover.remove_background(sequence)
             
             # Apply current image processing filter
@@ -281,7 +251,6 @@ def custom_processing(img_source_generator):
             # Add controls info and auto-cycle status
             display_text.extend([
                 "F=Filter, B=Background, H=Help",
-                f"Auto in: {300 - filter_manager.frame_counter}f"
             ])
             
             # Display text on image
@@ -303,8 +272,8 @@ def main():
     print("========================================")
     
     # Reduced resolution for better performance - adjust as needed
-    width = 1280  # Reduced from 1920
-    height = 720  # Reduced from 1080
+    width = 1280  
+    height = 720  
     fps = 30
     
     # Define your virtual camera
@@ -313,10 +282,10 @@ def main():
     vc.virtual_cam_interaction(
         custom_processing(
             # Use camera stream (recommended for background removal)
-            vc.capture_cv_video(0, bgr_to_rgb=True)
+            # vc.capture_cv_video(0, bgr_to_rgb=True)
             
             # Or use screen capture (comment out camera and uncomment this)
-            # vc.capture_screen()
+            vc.capture_screen()
         )
     )
 
